@@ -1,0 +1,6 @@
+flask
+requests
+nltk
+matplotlib
+fasttext
+keybert
