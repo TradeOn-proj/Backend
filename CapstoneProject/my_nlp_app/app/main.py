@@ -1,10 +1,15 @@
-from app import create_app
+from app import create_app, socket_io
+from app.socket_handlers import register_socketio_handlers
 from flask import Flask
+from flask_socketio import SocketIO
 import requests
 import nltk
 import matplotlib.pyplot as plt
 
 app = create_app()
+socket_io = SocketIO(app, async_mode='threading')
+
+register_socketio_handlers(socket_io)
 
 @app.route('/')
 def check_connection():
@@ -21,4 +26,4 @@ if __name__ == '__main__':
         response = client.post('/test', json={'text': 'Flask is good!'})
         print('✅ 응답 결과:', response.get_json(), '\n')
 
-    app.run(host='0.0.0.0', port=5000)
+    socket_io.run(app, host='0.0.0.0', port=5000, debug= True, use_reloader= False)
