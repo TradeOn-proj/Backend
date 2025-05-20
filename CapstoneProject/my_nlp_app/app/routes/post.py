@@ -1,115 +1,128 @@
+# post.py — Post 모델 기반 게시글 등록, 수정, 삭제, 조회 API 구현 및 DB 연동
+
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from app import db
+from app.models.post import Post
+from datetime import datetime
 
-bp_post = Blueprint('post', __name__, url_prefix='/api/v1/posts')
+post_bp = Blueprint("post", __name__, url_prefix="/api/v1/posts")
 
-@bp_post.route('', methods=['GET'])
-def search_post():
-    
-    keyword = request.args.get('keyword')
-    category = request.args.get('category')
-    page = request.args.get('page', type = int)
-    size = request.args.get('size', type = int)
-    sort_by = request.get('sort_by')
-    sort_order = request.get('sort_order')
-
-    if not all([keyword, category, page, size, sort_by, sort_order]):
-        return jsonify({'400 Bad Request : "status error" : 잘못된 검색 조건입니다.'}), 400
-        
-    #db조회후 결과 찾기
-
-    return jsonify({
-        'postid' : '게시물id',
-        'title' : '제목',
-        'thumbnail_image_url' : 'example.png',
-        'description' : '설명',
-        'author' : '작성자정보',
-        'keyword' : '게시물 키워드',
-        'category' : '게시물 카테고리',
-        'viewing' : '게시물 조회수',
-        'current_page' : '현재 페이지',
-        'page_size' : '페이지 게시물 수',
-        'next_page_to' : '다음 페이지'    
-    })
-
-@bp_post.route('', methods=['POST'])
-def register_post():
+# 게시글 등록 API — 인증 필요
+@post_bp.route('', methods=['POST'])
+@jwt_required()
+def create_post():
     data = request.get_json()
 
+    author_id = get_jwt_identity()
     title = data.get('title')
-    content = data.get('content')
-    keyword = data.get('keyword')
-    desired_items = data.get('desired_items')
+    description = data.get('description')
     category = data.get('category')
+    keyword = data.get('keyword')
     thumbnail_image_url = data.get('thumbnail_image_url')
 
-    if not all([title, content, keyword, desired_items, category, thumbnail_image_url]):
-        return jsonify({'400 Bad Request : "status error" : 필수 입력값이 누락되었거나 형식이 올바르지 않습니다.'}), 400
+    if not all([title, description]):
+        return jsonify({
+            "status": "error",
+            "message": "title과 description은 필수입니다."
+        }), 400
 
-    #토큰 기능 구현시 권한여부 확인 할것
-    #db접근해서 등록
+    post = Post(
+        title=title,
+        description=description,
+        author_id=author_id,
+        category=category,
+        keyword=keyword,
+        thumbnail_image_url=thumbnail_image_url,
+        created_at=datetime.utcnow()
+    )
+
+    db.session.add(post)
+    db.session.commit()
 
     return jsonify({
-        'postid' : '게시물ID',
-        'message' : '201 Created : "status success" : "게시물이 성공적으로 등록되었습니다!"'
+        "status": "success",
+        "post": {
+            "id": post.id,
+            "title": post.title,
+            "author_id": post.author_id,
+            "created_at": post.created_at.strftime('%Y-%m-%d %H:%M')
+        }
     }), 201
 
-
-@bp_post.route('/<postid>', methods=['GET'])
-def view_post(postid):
-    #db접근해서 게시물 찾기
-    #접근 불가할 시
-    #return jsonify({'404 Not Found : "status error" : 요청하신 게시물을 찾을 수 없습니다.'}), 404
+# 게시글 목록 조회 API (옵션)
+@post_bp.route('', methods=['GET'])
+def list_posts():
+    posts = Post.query.order_by(Post.created_at.desc()).all()
+    result = [{
+        "id": p.id,
+        "title": p.title,
+        "author_id": p.author_id,
+        "category": p.category,
+        "keyword": p.keyword,
+        "created_at": p.created_at.strftime('%Y-%m-%d')
+    } for p in posts]
 
     return jsonify({
-        'postid' : '게시물id',
-        'title' : '제목',
-        'thumbnail_image_url' : 'example.png',
-        'content' : '게시물 전체내용용',
-        'author' : '작성자정보',
-        'keyword' : '게시물 키워드',
-        'category' : '게시물 카테고리',
-        'viewing' : '게시물 조회수',
-        'status' : '게시물 현재 상태',
-        'createAt' : '게시물 생성 일지',
-        'updateAt' : '게시물 최종수정일',
+        "status": "success",
+        "count": len(result),
+        "posts": result
+    }), 200
+
+# 게시글 상세 조회
+@post_bp.route('/<int:postid>', methods=['GET'])
+def get_post(postid):
+    post = Post.query.get(postid)
+    if not post:
+        return jsonify({"status": "error", "message": "게시글을 찾을 수 없습니다."}), 404
+
+    return jsonify({
+        "id": post.id,
+        "title": post.title,
+        "description": post.description,
+        "author_id": post.author_id,
+        "category": post.category,
+        "keyword": post.keyword,
+        "thumbnail_image_url": post.thumbnail_image_url,
+        "created_at": post.created_at.strftime('%Y-%m-%d %H:%M')
     })
 
-@bp_post.route('/<postid>', methods=['PUT'])
+# 게시글 수정
+@post_bp.route('/<int:postid>', methods=['PUT'])
+@jwt_required()
 def update_post(postid):
-    #db접근해서 게시물 찾기
-    #접근 불가할 시
-    #return jsonify({'404 Not Found : "status error" : 요청하신 게시물을 찾을 수 없습니다.'}), 404
+    post = Post.query.get(postid)
+    user_id = get_jwt_identity()
+
+    if not post:
+        return jsonify({"status": "error", "message": "게시글을 찾을 수 없습니다."}), 404
+    if post.author_id != user_id:
+        return jsonify({"status": "error", "message": "작성자만 수정할 수 있습니다."}), 403
 
     data = request.get_json()
+    post.title = data.get("title", post.title)
+    post.description = data.get("description", post.description)
+    post.category = data.get("category", post.category)
+    post.keyword = data.get("keyword", post.keyword)
+    post.thumbnail_image_url = data.get("thumbnail_image_url", post.thumbnail_image_url)
 
-    title = data.get('title')
-    content = data.get('content')
-    keyword = data.get('keyword')
-    desired_items = data.get('desired_items')
-    category = data.get('category')
-    thumbnail_image_url = data.get('thumbnail_image_url')
-    status = data.get('status')
+    db.session.commit()
 
-    if not all([title, content, keyword, desired_items, category, thumbnail_image_url, status]):
-        return jsonify({'400 Bad Request : "status error" : 필수 입력값이 누락되었거나 형식이 올바르지 않습니다.'}), 400
-    
-    #토큰 기능 구현시 권한여부 확인 할것
-    #db접근해서 등록
+    return jsonify({"status": "success", "message": "게시글이 수정되었습니다."})
 
-    return jsonify({
-        'postid' : '수정된 게시물ID',
-        'message' : '200 OK : "status success" : "게시물이 성공적으로 수정되었습니다!"'
-    }), 200
-
-@bp_post.route('/<postid>', methods=['DELETE'])
+# 게시글 삭제
+@post_bp.route('/<int:postid>', methods=['DELETE'])
+@jwt_required()
 def delete_post(postid):
-    #db접근해서 게시물 찾기
-    #접근 불가할 시
-    #return jsonify({'404 Not Found : "status error" : 요청하신 게시물을 찾을 수 없습니다.'}), 404
+    post = Post.query.get(postid)
+    user_id = get_jwt_identity()
 
-    #토큰 기능 구현시 권한여부 확인 할것
-    #db접근해서 삭제
+    if not post:
+        return jsonify({"status": "error", "message": "게시글을 찾을 수 없습니다."}), 404
+    if post.author_id != user_id:
+        return jsonify({"status": "error", "message": "작성자만 삭제할 수 있습니다."}), 403
 
-    return jsonify({
-        'message' : '200 OK : "status success" : "게시물이 성공적으로 삭제제되었습니다!"'
-    }), 200
+    db.session.delete(post)
+    db.session.commit()
+
+    return jsonify({"status": "success", "message": "게시글이 삭제되었습니다."})

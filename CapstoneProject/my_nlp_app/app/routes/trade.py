@@ -1,84 +1,97 @@
+# trade.py — Trade 모델 기반 거래 요청, 수락, 거절, 완료 API 구현
+
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from app import db
+from app.models.trade import Trade
+from app.models.post import Post
+from datetime import datetime
 
-bp_trade = Blueprint('trade', __name__, url_prefix='/api/v1/trades')
+trade_bp = Blueprint("trade", __name__, url_prefix="/api/v1/trades")
 
-@bp_trade.route('', methods = ['POST'])
-def suggest_trade():
+# 거래 요청 생성 API — 인증 필요
+@trade_bp.route('', methods=['POST'])
+@jwt_required()
+def create_trade():
     data = request.get_json()
 
-    proposing_item_id = data.get('proposing_item_id')
-    target_post_id = data.get('target_post_id')
+    requester_id = get_jwt_identity()
+    post_id = data.get("post_id")
+    message = data.get("message", "")
 
-    if not all([proposing_item_id, target_post_id]):
-        return jsonify({'400 Bad Request : "status error" : 잘못된 요청 데이터입니다다.'}), 400
-    
-    #토큰 기능 구현시 권한여부 확인 할것
-    #db접근해서 게시물 찾기
-    #접근 불가할 시
-    #return jsonify({'404 Not Found : "status error" : 요청하신 게시물을 찾을 수 없습니다.'}), 404
-    #이미 진행 중인 거래일시 409메세지 보내기
+    if not post_id:
+        return jsonify({
+            "status": "error",
+            "message": "post_id는 필수입니다."
+        }), 400
 
-    #db접근해서 거래 등록하기
+    trade = Trade(
+        post_id=post_id,
+        requester_id=requester_id,
+        message=message,
+        status="pending",
+        created_at=datetime.utcnow()
+    )
+
+    db.session.add(trade)
+    db.session.commit()
 
     return jsonify({
-        'postid' : '새로 생성된 거래ID',
-        'message' : '201 Created : "status success" : "교환 제안이 성공적으로 전송되었습니다!"'
+        "status": "success",
+        "trade": {
+            "id": trade.id,
+            "post_id": trade.post_id,
+            "requester_id": trade.requester_id,
+            "status": trade.status,
+            "message": trade.message,
+            "created_at": trade.created_at.strftime('%Y-%m-%d %H:%M')
+        }
     }), 201
 
-@bp_trade.route('/<tradeid>/accept', methods=['PUT'])
-def accept_trade(tradeid):
+# 거래 상태 변경 API (수락/거절/완료)
+@trade_bp.route('/<int:trade_id>/<string:action>', methods=['PUT'])
+@jwt_required()
+def update_trade_status(trade_id, action):
+    user_id = get_jwt_identity()
+    trade = Trade.query.get(trade_id)
 
-    #db접근해서 게시물 찾기
-    #접근 불가할 시
-    #return jsonify({'404 Not Found : "status error" : 해당 거래 제안을 찾을 수 없습니다.'}), 404
+    if not trade:
+        return jsonify({"status": "error", "message": "거래 요청을 찾을 수 없습니다."}), 404
 
-    data = request.get_json()
+    post = Post.query.get(trade.post_id)
+    if not post or post.author_id != user_id:
+        return jsonify({"status": "error", "message": "해당 거래를 변경할 권한이 없습니다."}), 403
 
-    accept_message = data.get('accept_message')
+    if action == 'accept':
+        trade.status = 'accepted'
+    elif action == 'reject':
+        trade.status = 'rejected'
+    elif action == 'complete':
+        trade.status = 'completed'
+    else:
+        return jsonify({"status": "error", "message": "허용되지 않은 액션입니다."}), 400
 
-    #토큰 기능 구현시 권한여부 확인 할것
-    #db접근해서 등록
+    db.session.commit()
 
-    return jsonify({
-        'tradeid' : '수락된 거래 제안 ID',
-        'current_status' : 'accepted',
-        'message' : '200 OK : "status success" : "거래 제안을 수락했습니다. 상대방에게 알림이 전송됩니다."'
-    }), 200
+    return jsonify({"status": "success", "message": f"거래가 {action} 처리되었습니다."})
 
-@bp_trade.route('/<tradeid>/reject', methods=['PUT'])
-def reject_trade(tradeid):
+# 특정 게시글 거래 요청 목록 조회
+@trade_bp.route('/post/<int:post_id>', methods=['GET'])
+@jwt_required()
+def get_trades_by_post(post_id):
+    user_id = get_jwt_identity()
+    post = Post.query.get(post_id)
+    if not post or post.author_id != user_id:
+        return jsonify({"status": "error", "message": "해당 게시글에 접근할 수 없습니다."}), 403
 
-    #db접근해서 게시물 찾기
-    #접근 불가할 시
-    #return jsonify({'404 Not Found : "status error" : 해당 거래 제안을 찾을 수 없습니다.'}), 404
+    trades = Trade.query.filter_by(post_id=post_id).order_by(Trade.created_at.desc()).all()
 
-    data = request.get_json()
+    result = [{
+        "trade_id": t.id,
+        "requester_id": t.requester_id,
+        "status": t.status,
+        "message": t.message,
+        "created_at": t.created_at.strftime('%Y-%m-%d')
+    } for t in trades]
 
-    rejection_reason = data.get('rejection_reason')
-
-    #토큰 기능 구현시 권한여부 확인 할것
-    #db접근해서 등록
-
-    return jsonify({
-        'tradeid' : '거절된 거래 제안 ID',
-        'current_status' : 'rejected',
-        'message' : '200 OK : "status success" : "거래 제안을 거절했습니다. 상대방에게 알림이 전송됩니다."'
-    }), 200
-
-
-@bp_trade.route('/<tradeid>/complete', methods=['PUT'])
-def complete_trade(tradeid):
-
-    #db접근해서 게시물 찾기
-    #접근 불가할 시
-    #return jsonify({'404 Not Found : "status error" : 해당 거래 제안을 찾을 수 없습니다.'}), 404
-
-    #토큰 기능 구현시 권한여부 확인 할것
-    #db접근해서 등록
-
-    return jsonify({
-        'tradeid' : '완료된 거래 제안 ID',
-        'user_confirmed' : 'true',
-        'is_completed' : 'false',
-        'message' : '200 OK : "status success" : "거래 완료를 확인했습니다. 상대방의 확인을 기다립니다."'
-    }), 200
+    return jsonify({"status": "success", "trades": result})

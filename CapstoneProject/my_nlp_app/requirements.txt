@@ -1,0 +1,10 @@
+flask
+requests
+nltk
+matplotlib
+fasttext
+keybert
+flask_sqlalchemy
+python-dotenv
+pymysql
+flask_cors

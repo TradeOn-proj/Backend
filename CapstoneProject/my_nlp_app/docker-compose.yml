@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  flask_app:
+    build: 
+      context: .
+    image: flask_test:latest
+    container_name: flask_app_container
+    working_dir: /app
+    command: python -m app.main
+    ports:
+      - "5000:5000"
+    environment:
+      - PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - LANG=C.UTF-8
+      - GPG_KEY=A035C8C19219BA821ECEA86B64E628F8D684696D
+      - PYTHON_VERSION=3.10.7
+      - PYTHON_PIP_VERSION=22.2.2
+      - PYTHON_SETUPTOOLS_VERSION=63.2.0
+      - PYTHON_GET_PIP_URL=https://github.com/pypa/get-pip/raw/5eaac1050023df1f5c98b173b248c260023f2278/public/get-pip.py
+      - PYTHON_GET_PIP_SHA256=5aefe6ade911d997af080b315ebcb7f882212d070465df544e1175ac2be519b4
+      - NLTK_DATA=/usr/local/nltk_data
+    restart: "no"
+    networks:
+      - default
+    env_file:
+      - .env
+
+networks:
+  default:
+    driver: bridge
