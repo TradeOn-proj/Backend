@@ -66,7 +66,7 @@ def valuation_price(postid):
     return jsonify({"평가 등록 완료"}), 200
 
 @bp_valuation.route('/<postid>/average', methods = ['GET'])
-def valuation_price(postid):
+def valuation_average(postid):
     postId = postid
 
     #DB 조회하고 없으면 404 오류

@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
 
-bp_post = Blueprint('search', __name__, url_prefix='/api/v1/search')
+bp_search = Blueprint('search', __name__, url_prefix='/api/v1/search')
 
-@bp_post.route('', methods=['GET'])
+@bp_search.route('', methods=['GET'])
 def search_post():
     
     keyword = request.args.get("keyword")
