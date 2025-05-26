@@ -18,7 +18,6 @@ def create_post():
     title = data.get('title')
     description = data.get('description')
     category = data.get('category')
-    keyword = data.get('keyword')
     thumbnail_image_url = data.get('thumbnail_image_url')
 
     if not all([title, description]):
@@ -32,7 +31,6 @@ def create_post():
         description=description,
         author_id=author_id,
         category=category,
-        keyword=keyword,
         thumbnail_image_url=thumbnail_image_url,
         created_at=datetime.utcnow()
     )
@@ -59,7 +57,6 @@ def list_posts():
         "title": p.title,
         "author_id": p.author_id,
         "category": p.category,
-        "keyword": p.keyword,
         "created_at": p.created_at.strftime('%Y-%m-%d')
     } for p in posts]
 
@@ -82,7 +79,6 @@ def get_post(postid):
         "description": post.description,
         "author_id": post.author_id,
         "category": post.category,
-        "keyword": post.keyword,
         "thumbnail_image_url": post.thumbnail_image_url,
         "created_at": post.created_at.strftime('%Y-%m-%d %H:%M')
     })
@@ -103,7 +99,6 @@ def update_post(postid):
     post.title = data.get("title", post.title)
     post.description = data.get("description", post.description)
     post.category = data.get("category", post.category)
-    post.keyword = data.get("keyword", post.keyword)
     post.thumbnail_image_url = data.get("thumbnail_image_url", post.thumbnail_image_url)
 
     db.session.commit()

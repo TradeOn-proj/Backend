@@ -4,3 +4,12 @@ nltk
 matplotlib
 fasttext
 keybert
+flask_sqlalchemy
+python-dotenv
+pymysql
+flask_cors
+numpy==1.26.4
+sentence-transformers==4.1.0
+rank-bm25==0.2.2
+scikit-learn==1.6.1
+rapidfuzz==3.13.0

@@ -25,6 +25,7 @@ def create_app():
     from app.routes.userme import userme_bp
     from app.routes.valuation import valuation_bp
     from app.routes.test import test_bp
+    from app.routes.search import search_bp
 
     app.register_blueprint(user_bp)
     app.register_blueprint(post_bp)
@@ -33,6 +34,7 @@ def create_app():
     app.register_blueprint(userme_bp)
     app.register_blueprint(valuation_bp)
     app.register_blueprint(test_bp)
+    app.register_blueprint(search_bp)
 
     @app.route("/ping")
     def ping():

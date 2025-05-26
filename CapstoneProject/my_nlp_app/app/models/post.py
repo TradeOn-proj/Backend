@@ -7,7 +7,6 @@ class Post(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=False)
     category = db.Column(db.String(50), nullable=True)
-    keyword = db.Column(db.String(50), nullable=True)
     thumbnail_image_url = db.Column(db.String(255), nullable=True)
 
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
