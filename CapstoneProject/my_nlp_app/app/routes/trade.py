@@ -48,7 +48,7 @@ def reject_trade(tradeid):
     comment = data.get("comment")
 
     if not all([reviewerId, rating, comment]):
-        return jsonify({"잘못된 입력 또는 중복 리뷰"}), 400
+        return jsonify({"error" : "잘못된 입력 또는 중복 리뷰"}), 400
     #db접근해서 게시물 찾기
     #접근 불가할 시
     #return jsonify({'404 Not Found : "status error" : 해당 거래 제안을 찾을 수 없습니다.'}), 404

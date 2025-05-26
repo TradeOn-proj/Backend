@@ -12,7 +12,7 @@ def test():
         data = request.get_json()
 
         if not data or 'text' not in data:
-            return jsonify({'error': 'Missing "text" field'}), 400
+            return jsonify({"error": 'Missing "text" field'}), 400
     
         text = data['text']
 

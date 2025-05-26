@@ -10,7 +10,7 @@ def register():
     password =data.get("password")
 
     if not all([username, password]):
-        return jsonify({"잘못된 요청(필드 누락 또는 형식오류)"}), 400
+        return jsonify({"error" : "잘못된 요청(필드 누락 또는 형식오류)"}), 400
     
     #데이터베이스 중복 확인 조건
     #return jsonify({ '409 Conflict : "status error" : 이미 사용 중인 사용자 이름 또는 이메일입니다.'}), 409
@@ -29,7 +29,7 @@ def login():
     password = data.get("password")
 
     if not all([username, password]):
-        return jsonify({"잘못된 요청(필드 누락 또는 형식오류)"}), 400
+        return jsonify({"error" : "잘못된 요청(필드 누락 또는 형식오류)"}), 400
     
     #유저 찾기
     #유저 찾기 실패 또는 password 불일치일때
@@ -47,7 +47,7 @@ def log_out():
     userId = data.get("userId")
 
     if not all([userId]):
-        return jsonify({"잘못된 요청(필드 누락 또는 형식오류)"}), 400
+        return jsonify({"error" : "잘못된 요청(필드 누락 또는 형식오류)"}), 400
     
     #유저 찾기
     #유저 못 찾을 시 오류, 찾을 시 삭제
@@ -112,11 +112,11 @@ def user_points(userid):
     amount = data.get("amount")
 
     if not all([amount]):
-        return jsonify({"잘못된 요청"}), 400
+        return jsonify({"error" : "잘못된 요청"}), 400
     
     #DB 접근해서 수정
 
-    return jsonify({"포인트 수정 성공"}), 200
+    return jsonify({"message" : "포인트 수정 성공"}), 200
 
 @bp_user.route('/<userid>/delete', methods=['DELETE'])
 def user_delete(userid):
@@ -125,7 +125,7 @@ def user_delete(userid):
     #DB 조회 후 없으면 404 오류
 
     #DB 조회 후 삭제
-    return jsonify({"탈퇴 성공"}), 200
+    return jsonify({"message" : "탈퇴 성공"}), 200
 
 @bp_user.route('/<userid>/grade',methods=['GET'])
 def user_grade(userid):

@@ -31,7 +31,7 @@ def register_post():
     price = data.get("price")
 
     if not all([userId, title, description, category, price]):
-        return jsonify({"필수 필드 누락"}), 400
+        return jsonify({"error" : "필수 필드 누락"}), 400
 
     #토큰 기능 구현시 권한여부 확인 할것
     #db접근해서 등록
@@ -86,7 +86,7 @@ def update_post(postid):
     #토큰 기능 구현시 권한여부 확인 할것
     #db접근해서 등록
 
-    return jsonify({"게시물 수정 성공"}), 200
+    return jsonify({"message" : "게시물 수정 성공"}), 200
 
 @bp_post.route('/<postid>', methods=['DELETE'])
 def delete_post(postid):
@@ -98,4 +98,4 @@ def delete_post(postid):
     #토큰 기능 구현시 권한여부 확인 할것
     #db접근해서 삭제
 
-    return jsonify({"삭제 성공"}), 200
+    return jsonify({"message" : "삭제 성공"}), 200

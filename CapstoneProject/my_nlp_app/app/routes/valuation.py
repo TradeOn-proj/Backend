@@ -27,7 +27,7 @@ def post_valuation():
     description = data.get("description")
 
     if not all([userId, title, description]):
-        return jsonify({"필드 누락"}), 400
+        return jsonify({"error" : "필드 누락"}), 400
     
     #토큰, 권한 확인
     #DB 등록
@@ -63,7 +63,7 @@ def valuation_price(postid):
     userId = data.get("userId")
     price = data.get("price")
 
-    return jsonify({"평가 등록 완료"}), 200
+    return jsonify({"error" : "평가 등록 완료"}), 200
 
 @bp_valuation.route('/<postid>/average', methods = ['GET'])
 def valuation_average(postid):

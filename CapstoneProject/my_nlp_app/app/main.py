@@ -23,7 +23,11 @@ if __name__ == '__main__':
     with app.test_client() as client:
 
         print('\n📦 테스트 요청 시작...\n')
-        response = client.post('/test', json={'text': 'Flask is good!'})
+
+        response = client.get('/api/v1/users/{user1}/trades')
+        print('✅ 응답 결과:', response.get_json(), '\n')
+
+        response = client.post('/api/v1/users/register',json={"username" : "user1"})
         print('✅ 응답 결과:', response.get_json(), '\n')
 
     socket_io.run(app, host='0.0.0.0', port=5000, debug= True, use_reloader= False)
