@@ -11,17 +11,21 @@
 
   <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
   <script>
-    const socket = io();
+    const socket = io();//서버 소켓 연결, 나중에 서버 ip 넣어서 다른 기기 끼리 연결 가능 
+    const roomid = "room1" //url에 따라 chatroomid 설정정
 
-    socket.on('message', function(msg) {
-      const li = document.createElement("li");
-      li.textContent = msg;
-      document.getElementById("messages").appendChild(li);
+    socket.on('message', (data) => {//서버에서 채팅 메세지 데이터 받아오는 함수
+      //data=  {username(유저이름), msg(메세지 내용)}
     });
 
-    function sendMessage() {
+    socket.on('history',(data) =>{//data 안에 서버에서 DB접근해서 얻은 채팅내역 있을 예정
+
+    });
+
+    function sendMessage() {//서버로 메세지 보내는 함수
+      const username = "user1"//임시 고정 이름, 나중에 username 인자로 받아오기
       const msg = document.getElementById("messageInput").value;
-      socket.send(msg);
+      socket.emit('message', {username, roomid, msg});//username, roomid, msg내용 전송
       document.getElementById("messageInput").value = '';
     }
   </script>
