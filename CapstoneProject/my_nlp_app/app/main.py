@@ -1,6 +1,6 @@
 from app import create_app, socket_io
 from app.socket_handlers import register_socketio_handlers
-from flask import Flask
+from flask import Flask, render_template
 from flask_socketio import SocketIO
 import requests
 import nltk
@@ -18,13 +18,20 @@ def check_connection():
         return f"Status Code: {response.status_code}, Connected to Google!"
     except requests.exceptions.RequestException as e:
         return f"Connection failed: {e}"
+    
+@app.route('/chat/<room_id>')
+def chat(room_id):
+    return render_template('chat.html', room_id=room_id)
 
 if __name__ == '__main__':
     with app.test_client() as client:
 
         print('\n📦 테스트 요청 시작...\n')
 
-        response = client.get('/api/v1/users/{user1}/trades')
+        response = client.post('/api/v1/users/login',json={"username" : "user1", "password" : "pw1"})
+        print('✅ 응답 결과:', response.get_json(), '\n')
+
+        response = client.get('/api/v1/search')
         print('✅ 응답 결과:', response.get_json(), '\n')
 
         response = client.post('/api/v1/users/register',json={"username" : "user1"})
