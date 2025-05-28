@@ -7,7 +7,7 @@ def view_chatrooms():
     userId = request.args.get("UserId")
 
     if not all([userId]):
-        return jsonify({"message" : "userId 누락 또는 잘못된 요청"}), 400
+        return jsonify({"error" : "userId 누락 또는 잘못된 요청"}), 400
     #db조회후 결과 찾기
 
     return jsonify({
@@ -30,7 +30,7 @@ def create_chatroom():
     name = data.get("name")
 
     if not all([participantIds, relatedPostId, name]):
-        return jsonify({"message" : "필수 항목 누락 또는 유효하지 않은 요청"}), 400
+        return jsonify({"error" : "필수 항목 누락 또는 유효하지 않은 요청"}), 400
     
     return jsonify({
         "chatroomId": "string",
@@ -84,7 +84,7 @@ def send_chatroommessages(chatroomid):
     content = data.get("content")
 
     if not all([senderId, content]):
-        return jsonify({"message" : "필드 누락 또는 형식 오류"}), 400
+        return jsonify({"error" : "필드 누락 또는 형식 오류"}), 400
     
     #DB접근 후 없으면 404 오류
 
@@ -103,7 +103,7 @@ def promise_chatrooms():
     location = data.get("location")
 
     if not all([chatroomId, date, title, location]):
-        return jsonify({"message" : "필드 누락 또는 형식 오류"}), 400
+        return jsonify({"error" : "필드 누락 또는 형식 오류"}), 400
     
     #db조회 후 없으면 404 오류
 

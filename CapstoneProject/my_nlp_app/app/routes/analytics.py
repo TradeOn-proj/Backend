@@ -43,7 +43,7 @@ def analyze_update(userid):
     averageRating = data.get("averageRating")
 
     if not all([totalTrades, successfulTrades, averageRating]):
-        return jsonify({"message" : "잘못된 요청(필드 누락 또는 형식오류)"}), 400
+        return jsonify({"error" : "잘못된 요청(필드 누락 또는 형식오류)"}), 400
 
     #DB 조회하고 사용자 없으면 404
 
