@@ -127,10 +127,11 @@ paths:
     get:
       tags:
         - User
-      summary: 사용자 프로필 조회 ((userid(int)입력))
+      summary: 사용자 프로필 조회 (userid(int) 입력)
       parameters:
         - name: userid
           in: path
+          description: 조회할 사용자 ID
           required: true
           schema:
             type: integer
@@ -147,6 +148,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags:
+        - User
+      summary: 사용자 회원정보 수정
+      description: 인증된 사용자가 자신의 닉네임, 이메일, 프로필 이미지를 수정합니다.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userid
+          in: path
+          description: 수정할 사용자 ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        description: 수정할 사용자 정보(모든 필드 선택적)
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserProfileRequest'
+      responses:
+        "200":
+          description: 회원정보 수정 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateUserProfileResponse'
+        "403":
+          description: 권한 없음 (다른 사용자의 프로필 수정 시도)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: 해당 사용자를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "409":
+          description: 충돌 (이미 사용 중인 닉네임 또는 이메일)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'            
 
   /api/v1/users/{userid}/reviews:
     get:
@@ -167,7 +215,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/UserReview'
+                  $ref: '#/components/schemas/UserReviewListResponse'
 
   /api/v1/users/{userid}/trades:
     get:
@@ -293,6 +341,93 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: 사용자 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/users/{userid}/categories:
+    patch:
+      tags:
+        - User
+      summary: 사용자 관심 카테고리 업데이트
+      description: 인증된 사용자가 자신의 카테고리 목록을 최대 5개까지 수정합니다.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userid
+          in: path
+          description: 수정할 사용자 ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        description: 업데이트할 카테고리 목록 (최대 5개)
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryUpdateRequest'
+      responses:
+        "200":
+          description: 카테고리 업데이트 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryUpdateResponse'
+        "400":
+          description: 잘못된 요청 (카테고리 형식 오류 또는 개수 초과)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: 인증 필요 또는 토큰 만료
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: 권한 없음 (다른 사용자의 카테고리 수정 시도)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: 해당 사용자를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - User
+      summary: 사용자 관심 카테고리 조회
+      description: 인증된 사용자가 자신의 관심 카테고리(최대 5개)를 조회합니다.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userid
+          in: path
+          description: 조회할 사용자 ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 카테고리 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryListResponse'
+        "403":
+          description: 권한 없음 (다른 사용자의 카테고리 열람 시도)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: 해당 사용자를 찾을 수 없음
           content:
             application/json:
               schema:
@@ -761,6 +896,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/posts/recommend:
+    get:
+      tags:
+        - Post
+      summary: 카테고리 기반 추천 게시물 조회
+      description: 로그인한 사용자의 관심 카테고리를 기반으로 최근 게시물 중 최대 20개를 추천합니다.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: 추천 게시글 반환 (관심 카테고리 없음 시 빈 목록 포함)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostRecommendResponse'
+        "404":
+          description: 사용자 정보를 찾을 수 없습니다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'  
+
   /api/v1/chatrooms:
     get:
       tags:
@@ -1325,13 +1483,13 @@ paths:
             type: string
             example: 에어팟 프로 중고 팝니다
       responses:
-        '200':
+        "200":
           description: 검색 성공
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdvancedSearchResponse'
-        '400':
+        "400":
           description: 잘못된 요청 (title 없음)
           content:
             application/json:
@@ -1403,18 +1561,142 @@ components:
         image:
           type: string
           example: https://example.com/profile.png
+        ongoing_trades:
+              type: array
+              description: 진행 중인 거래 목록
+              items:
+                type: object
+                properties:
+                  trade_id:
+                    type: integer
+                    description: 거래 ID
+                    example: 42
+                  title:
+                    type: string
+                    description: 거래 게시글 제목
+                    example: "중고 노트북 팝니다"
+                  status:
+                    type: string
+                    description: 거래 상태 (PENDING 또는 ACCEPTED)
+                    example: "PENDING"
+                  thumbnail_image_url:
+                    type: string
+                    description: 거래 게시글 썸네일 이미지 URL
+                    example: https://example.com/thumb.jpg
+                required:
+                  - trade_id
+                  - title
+                  - status
+                  - thumbnail_image_url
 
+    UpdateUserProfileRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          description: 변경할 닉네임 (선택)
+          example: "new_username"
+        email:
+          type: string
+          description: 변경할 이메일 (선택)
+          format: email
+          example: "new_email@example.com"
+        profile_image_url:
+          type: string
+          description: 변경할 프로필 이미지 URL (선택)
+          example: "/static/uploads/new_profile.png"
+      # 모두 선택적이므로 required 없음
+
+    UpdateUserProfileResponse:
+      type: object
+      properties:
+        msg:
+          type: string
+          description: 응답 메시지
+          example: "회원정보 수정 완료"
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+              description: 사용자 ID
+              example: 1
+            username:
+              type: string
+              description: 수정된 닉네임
+              example: "new_username"
+            email:
+              type: string
+              description: 수정된 이메일
+              example: "new_email@example.com"
+            profile_image_url:
+              type: string
+              description: 수정된 프로필 이미지 URL
+              example: "/static/uploads/new_profile.png"
+          required:
+            - id
+            - username
+            - email
+            - profile_image_url
+      required:
+        - msg
+        - user              
+
+    UserReviewListResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: 요청 처리 상태
+          example: "success"
+        user_id:
+          type: integer
+          description: 조회한 사용자 ID
+          example: 5
+        review_count:
+          type: integer
+          description: 총 리뷰 개수
+          example: 3
+        reviews:
+          type: array
+          description: 리뷰 목록
+          items:
+            $ref: '#/components/schemas/UserReview'
+      required:
+        - status
+        - user_id
+        - review_count
+        - reviews
     UserReview:
       type: object
       properties:
-        id:
+        review_id:
           type: integer
-        reviewer:
-          type: string
+          description: 리뷰 ID
+          example: 42
+        reviewer_id:
+          type: integer
+          description: 리뷰어(작성자) 사용자 ID
+          example: 7
         rating:
           type: integer
+          description: 평점(예-> 1~5 사이)
+          example: 4
         comment:
           type: string
+          description: 리뷰 코멘트
+          example: "정말 친절한 거래였습니다!"
+        date:
+          type: string
+          format: date
+          description: 리뷰 작성일 (YYYY-MM-DD)
+          example: "2025-05-31"
+      required:
+        - review_id
+        - reviewer_id
+        - rating
+        - comment
+        - date
 
     UserTrade:
       type: object
@@ -1476,6 +1758,56 @@ components:
         points:
           type: integer
           example: 1250
+
+    CategoryUpdateRequest:
+      type: object
+      properties:
+        categories:
+          type: array
+          description: 최대 5개의 카테고리 문자열을 순서대로 전달
+          items:
+            type: string
+          minItems: 0
+          maxItems: 5
+          example: ["운동", "요리", "음악"]
+      required:
+        - categories
+
+    CategoryUpdateResponse:
+      type: object
+      properties:
+        msg:
+          type: string
+          description: 성공 메시지
+          example: "카테고리 업데이트 완료"
+        categories:
+          type: array
+          description: 현재 저장된 5개의 카테고리 (값이 없으면 null)
+          items:
+            type: string
+            nullable: true
+          example: ["운동", "요리", "null", "null", "null"]
+      required:
+        - msg
+        - categories    
+
+    CategoryListResponse:
+      type: object
+      properties:
+        msg:
+          type: string
+          description: 응답 메시지
+          example: "카테고리 조회 성공"
+        categories:
+          type: array
+          description: 사용자가 설정한 최대 5개의 카테고리 (값이 없으면 null)
+          items:
+            type: string
+            nullable: true
+          example: ["전자기기", "도서", null, null, null]
+      required:
+        - msg
+        - categories    
 
     TradeCreateRequest:
       type: object
@@ -1613,7 +1945,57 @@ components:
           type: string
         thumbnail_image_url:
           type: string
+          
+    PostRecommendItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 게시글 ID
+          example: 123
+        title:
+          type: string
+          description: 게시글 제목
+          example: "중고 노트북 팝니다"
+        status:
+          type: string
+          description: 상태 또는 추천 태그 (항상 "추천")
+          example: "추천"
+        category:
+          type: string
+          description: 게시글 카테고리
+          example: "전자기기"
+        thumbnail_image_url:
+          type: string
+          description: 게시글 썸네일 이미지 URL (없으면 기본값)
+          example: "https://example.com/thumb.jpg"
+      required:
+        - id
+        - title
+        - status
+        - category
+        - thumbnail_image_url
 
+    PostRecommendResponse:
+      type: object
+      properties:
+        msg:
+          type: string
+          description: 응답 메시지
+          example: "추천 게시글입니다."
+        count:
+          type: integer
+          description: 반환된 추천 게시글 개수
+          example: 5
+        posts:
+          type: array
+          description: 추천 게시글 목록
+          items:
+            $ref: '#/components/schemas/PostRecommendItem'
+      required:
+        - msg
+        - count
+        - posts      
 
     Chatroom:
       type: object
@@ -1738,11 +2120,26 @@ components:
           format: date-time
           description: 게시글 생성 시각 (YYYY-MM-DD HH:MM)
           example: "2025-06-01 14:30"
+        category:
+          type: string
+          description: 카테고리
+          example: "전자기기"
+        image:
+          type: string
+          description: 게시글 대표 이미지 URL (선택)
+          example: https://example.com/images/123.jpg
+        totalEvaluations:
+          type: integer
+          description: 유효한 평가(의견) 개수
+          example: 5
       required:
         - postId
         - title
         - averagePrice
         - createdAt
+        - category
+        - image
+
 
     # ──[C] 게시글 상세 스키마────────────────────────────────────────────────
     ValuationPostDetail:
@@ -1778,6 +2175,10 @@ components:
           format: date-time
           description: 게시글 생성 시각 (YYYY-MM-DD HH:MM)
           example: "2025-06-01 14:30"
+        image:
+          type: string
+          description: 게시글 대표 이미지 URL (선택)
+          example: https://example.com/images/123.jpg
       required:
         - postId
         - title
@@ -1786,6 +2187,7 @@ components:
         - averagePrice
         - totalEvaluations
         - createdAt
+        - image
 
     # ──[D] 게시글 생성 요청 스키마────────────────────────────────────────────
     ValuationPostCreateRequest:
@@ -1803,6 +2205,10 @@ components:
           type: string
           description: 카테고리
           example: "전자기기"
+        image:
+          type: string
+          description: 게시글 대표 이미지 URL (선택)
+          example: https://example.com/images/123.jpg
       required:
         - title
         - description
@@ -1998,20 +2404,36 @@ components:
             properties:
               id:
                 type: integer
+                description: 게시글 ID
                 example: 123
               title:
                 type: string
+                description: 게시글 제목
                 example: 에어팟 프로 중고 팝니다
               user_id:
                 type: integer
+                description: 게시글 작성자 ID
                 example: 1
               category:
                 type: string
+                description: 게시글 카테고리
                 example: 전자기기
+              thumbnail_image_url:
+                type: string
+                description: 게시글 썸네일 이미지 URL
+                example: https://example.com/thumb.jpg
               created_at:
                 type: string
-                format: date-time
+                format: date
+                description: 게시글 생성일 (YYYY-MM-DD)
                 example: 2024-06-01
+            required:
+              - id
+              - title
+              - user_id
+              - category
+              - thumbnail_image_url
+              - created_at
 
     ErrorResponse:
       type: object

@@ -11,6 +11,7 @@ class ValuationPost(db.Model):
     description = db.Column(db.Text, nullable=False)
     category = db.Column(db.String(50), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    image_url = db.Column(db.String(255), nullable=True)
 
     # Relationship: User (author) and Opinions
     author = db.relationship('User', back_populates='valuation_posts')

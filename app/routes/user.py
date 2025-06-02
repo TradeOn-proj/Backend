@@ -66,6 +66,23 @@ def user_profile(userid):
     if not user:
         return jsonify({"msg": "사용자를 찾을 수 없습니다."}), 404
 
+    # 요청자 또는 수락자로 참여 중인 PENDING, ACCEPTED 상태의 거래 조회
+    ongoing_trades = Trade.query.filter(
+        ((Trade.requester_id == userid) | (Trade.receiver_id == userid)) &
+        ((Trade.status == TradeStatus.PENDING) | (Trade.status == TradeStatus.ACCEPTED))
+    ).all()
+
+    # 거래 제목(게시글에서 가져옴)과 썸네일 이미지 준비
+    ongoing_trades_data = []
+    for trade in ongoing_trades:
+        trade_data = {
+            "trade_id": trade.id,
+            "title": trade.post.title if trade.post else "제목 없음",
+            "status": trade.status.value,
+            "thumbnail_image_url": trade.post.thumbnail_image_url if trade.post else "default.jpg"
+        }
+        ongoing_trades_data.append(trade_data)
+
     return jsonify({
         "user": {
             "id": user.id,
@@ -75,11 +92,12 @@ def user_profile(userid):
             "registeredAt": user.created_at.strftime('%Y-%m-%d') if user.created_at else "",
             "current_points": user.points,
             "current_grade": user.grade or "보따리장수",
-            "grade_icon_url": f"{user.grade.lower()}_grade.png",
+            "grade_icon_url": f"{user.grade.lower()}_grade.png" if user.grade else "보따리장수_grade.png",
             "total_trades": len(user.trades),
             "completed_trades": len([t for t in user.trades if t.status == 'COMPLETED']),
             "cancellation_count": 0,
-            "cancellation_warning": "false"
+            "cancellation_warning": "false",
+            "ongoing_trades": ongoing_trades_data
         }
     })
 
@@ -99,6 +117,7 @@ def user_review(userid):
     return jsonify({
         "status": "success",
         "user_id": userid,
+        "review_count": len(reviews), 
         "reviews": result
     }), 200
 
@@ -149,7 +168,8 @@ def user_trade_history(userid):
             "counterpartId": counterpart_id,
             "status": t.status.value,       # TradeStatus enum이면 .value 를 사용
             "createdAt": t.created_at.strftime('%Y-%m-%d %H:%M'),
-            "completedAt": t.completed_at.strftime('%Y-%m-%d %H:%M') if t.completed_at else None
+            "completedAt": t.completed_at.strftime('%Y-%m-%d %H:%M') if t.completed_at else None,
+            "role": "buyer" if t.requester_id == userid else "seller"
         })
 
     return jsonify(result), 200
@@ -192,10 +212,11 @@ def user_grade(userid):
         grade = "초보상인"
     else:
         grade = "보따리장수"
-
+    user.grade=grade
+    db.session.commit()
     return jsonify({
         "points": user.points,
-        "grade": grade,
+        "grade": user.grade,
         "gradeIconUrl": f"{grade}_grade.png"
     }), 200
 
@@ -214,3 +235,95 @@ def delete_user(userid):
     db.session.commit()
 
     return jsonify({"msg": "회원 탈퇴 완료"}), 200
+
+@user_bp.route('/<int:userid>/categories', methods=['PATCH'])
+@jwt_required()
+def update_categories(userid):
+    if int(get_jwt_identity()) != userid:
+        return jsonify({"msg": "권한이 없습니다."}), 403
+
+    data = request.get_json()
+    categories = data.get('categories')  # 리스트로 받음
+
+    if not isinstance(categories, list) or len(categories) > 5:
+        return jsonify({"msg": "카테고리는 리스트 형식이며 최대 5개까지 가능합니다."}), 400
+
+    user = User.query.get(userid)
+    if not user:
+        return jsonify({"msg": "사용자를 찾을 수 없습니다."}), 404
+
+    # 카테고리를 순서대로 할당
+    for i in range(5):
+        setattr(user, f'category{i+1}', categories[i] if i < len(categories) else None)
+
+    db.session.commit()
+
+    return jsonify({
+        "msg": "카테고리 업데이트 완료",
+        "categories": [user.category1, user.category2, user.category3, user.category4, user.category5]
+    }), 200
+
+@user_bp.route('/<int:userid>/categories', methods=['GET'])
+@jwt_required()
+def get_categories(userid):
+    if int(get_jwt_identity()) != userid:
+        return jsonify({"msg": "권한이 없습니다."}), 403
+
+    user = User.query.get(userid)
+    if not user:
+        return jsonify({"msg": "사용자를 찾을 수 없습니다."}), 404
+
+    categories = [
+        user.category1,
+        user.category2,
+        user.category3,
+        user.category4,
+        user.category5
+    ]
+
+    return jsonify({
+        "msg": "카테고리 조회 성공",
+        "categories": categories
+    }), 200
+
+# 회원정보 수정
+@user_bp.route('/<int:userid>/profile', methods=['PATCH'])
+@jwt_required()
+def update_user_profile(userid):
+    if int(get_jwt_identity()) != userid:
+        return jsonify({"msg": "권한이 없습니다."}), 403
+
+    user = User.query.get(userid)
+    if not user:
+        return jsonify({"msg": "사용자를 찾을 수 없습니다."}), 404
+
+    data = request.get_json()
+    username = data.get("username")
+    email = data.get("email")
+    profile_image_url = data.get("profile_image_url")
+
+    if username:
+        if User.query.filter(User.username == username, User.id != userid).first():
+            return jsonify({"msg": "이미 사용 중인 닉네임입니다."}), 409
+        user.username = username
+
+    if email:
+        if User.query.filter(User.email == email, User.id != userid).first():
+            return jsonify({"msg": "이미 사용 중인 이메일입니다."}), 409
+        user.email = email
+
+    if profile_image_url is not None:
+        user.profile_image_url = profile_image_url
+
+    db.session.commit()
+
+    return jsonify({
+        "msg": "회원정보 수정 완료",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "profile_image_url": user.profile_image_url
+        }
+    }), 200
+

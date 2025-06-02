@@ -211,3 +211,32 @@ def review_trade(tradeid):
     db.session.commit()
 
     return jsonify({"review_id": new_review.id}), 200
+
+@bp_trade.route('/<int:tradeid>/review', methods=['GET'], strict_slashes=False)
+@jwt_required()
+def get_trade_review_context(tradeid):
+    """
+    리뷰 작성을 위한 거래 관련 정보 조회
+    """
+    trade = Trade.query.get(tradeid)
+    if not trade:
+        return jsonify({'msg': '해당 거래를 찾을 수 없습니다.'}), 404
+
+    user_id = int(get_jwt_identity())
+    if trade.requester_id != user_id and trade.receiver_id != user_id:
+        return jsonify({'msg': '조회 권한이 없습니다.'}), 403
+    
+    post_id = trade.post_id
+    post = Post.query.get(post_id)
+    if not post:
+        return jsonify({'msg': '해당 거래에 연결된 게시글이 없습니다.'}), 404
+
+    return jsonify({
+        "tradeId": trade.id,
+        "post": {
+            "postId": post.id,
+            "title": post.title,
+            "thumbnailUrl": post.thumbnail_image_url,  # 이 필드가 모델에 있어야 함
+            "category": post.category
+        }
+    }), 200

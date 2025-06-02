@@ -238,6 +238,7 @@ def search_posts():
     }), 200
 
 
+
 # 심화 검색 엔드포인트 (title만 대상으로 하이브리드 검색)
 @search_bp.route('/advanced', methods=['GET'])
 def advanced_search():
@@ -278,8 +279,9 @@ def advanced_search():
                 result.append({
                     "id": post.id,
                     "title": post.title,
-                    "user_id": post.user_id,
+                    "author_id": post.user_id,
                     "category": post.category,
+                    "thumbnail_image_url": post.thumbnail_image_url,
                     "created_at": post.created_at.strftime('%Y-%m-%d') if post.created_at else None
                 })
                 break

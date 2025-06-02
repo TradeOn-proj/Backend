@@ -15,6 +15,11 @@ class User(db.Model):
     points = db.Column(db.Integer, default=0)
     grade = db.Column(db.String(20), nullable=False, default='보따리장수')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    category1 = db.Column(db.String(50), nullable=True)
+    category2 = db.Column(db.String(50), nullable=True)
+    category3 = db.Column(db.String(50), nullable=True)
+    category4 = db.Column(db.String(50), nullable=True)
+    category5 = db.Column(db.String(50), nullable=True)
 
     # Posts relationship
     posts = db.relationship('Post', back_populates='author', lazy=True)

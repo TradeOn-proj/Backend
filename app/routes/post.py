@@ -4,6 +4,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models.post import Post
 from datetime import datetime
+from app.models.user import User
 
 bp_post = Blueprint('post', __name__, url_prefix='/api/v1/posts')
 
@@ -164,3 +165,48 @@ def delete_post(postid):
     db.session.commit()
 
     return jsonify({'msg': '게시글 삭제 완료'}), 200
+
+@bp_post.route('/recommend', methods=['GET'])
+@jwt_required()
+def recommend_posts_by_category():
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+
+    if not user:
+        return jsonify({"msg": "사용자 정보를 찾을 수 없습니다."}), 404
+
+    categories = list(filter(None, [
+        user.category1,
+        user.category2,
+        user.category3,
+        user.category4,
+        user.category5
+    ]))
+
+    if not categories:
+        return jsonify({"msg": "추천 게시글입니다.", "count": 0, "posts": []}), 200
+
+    all_posts = Post.query.order_by(Post.created_at.desc()).limit(1000).all()
+
+    recommended = []
+    seen_ids = set()
+    for post in all_posts:
+        if post.category in categories and post.id not in seen_ids:
+            recommended.append(post)
+            seen_ids.add(post.id)
+            if len(recommended) >= 20:
+                break
+
+    result = [{
+        "id": post.id,
+        "title": post.title,
+        "status": "추천",
+        "category": post.category,
+        "thumbnail_image_url": post.thumbnail_image_url or "default.jpg"
+    } for post in recommended]
+
+    return jsonify({
+        "msg": "추천 게시글입니다.",
+        "count": len(result),
+        "posts": result
+    }), 200
